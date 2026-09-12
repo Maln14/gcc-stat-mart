@@ -177,7 +177,6 @@ def make_no_data_figure(year_label: str) -> go.Figure:
 
 
 def year_axis_settings(data: pd.DataFrame) -> dict:
-    """Keep year labels readable as the selected history grows."""
     first_year = int(data["year"].min())
     span = int(data["year"].max()) - first_year
     if span <= 5:
@@ -202,7 +201,6 @@ def year_axis_settings(data: pd.DataFrame) -> dict:
 def make_birth_rate_small_multiples(
     data: pd.DataFrame, unit: str
 ) -> go.Figure:
-    """Give every country its own readable trend panel."""
     countries_shown = [
         country for country in COUNTRIES if country in data["country_name"].unique()
     ]
@@ -260,7 +258,6 @@ def make_birth_rate_small_multiples(
 def make_inflation_small_multiples(
     data: pd.DataFrame, unit: str
 ) -> go.Figure:
-    """Separate volatile country series and emphasize the zero boundary."""
     countries_shown = [
         country for country in COUNTRIES if country in data["country_name"].unique()
     ]
@@ -402,7 +399,6 @@ def make_life_dot_plot(data: pd.DataFrame, unit: str) -> go.Figure:
 
 
 def make_life_original_to_latest(data: pd.DataFrame, unit: str) -> go.Figure:
-    """Compare each country's first published year with the latest available year."""
     endpoints = (
         data.sort_values("year")
         .groupby("country_name", as_index=False)
