@@ -1,13 +1,13 @@
 # GCC statistical mart
 
-A small **SQLite** project that stores comparable indicators for the six GCC countries in a star schema:
+A small **SQLite** project that stores comparable indicators for the GCC countries in a star schema:
 
 - `dim_country`, `dim_indicator`, `dim_year` — lookup tables
-- `stg_indicator_raw` — landing table (one messy CSV-style table)
+- `stg_indicator_raw` — landing table 
 - `fact_indicator` — clean table: **one row = one country + one indicator + one year**
-- `vw_gcc_indicators` — the view you should query day to day
+- `vw_gcc_indicators` — day to day query
 
-SQL stays at **beginner to intermediate**: `SELECT`, `WHERE`, `JOIN`, `GROUP BY`, `CASE`, and one **self-join** for year-over-year change. No window functions.
+
 
 The dashboard uses official [World Bank World Development Indicators](https://data.worldbank.org/indicator)
 downloaded through the World Bank API. Population is converted to millions and
