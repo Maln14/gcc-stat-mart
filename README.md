@@ -11,6 +11,8 @@ SQL stays at **beginner to intermediate**: `SELECT`, `WHERE`, `JOIN`, `GROUP BY`
 
 Sample numbers in `data/raw/` are **illustrative** (rounded, teaching-scale). Swap them later for [GCC-Stat](https://dp.marsa.gccstat.org/) or World Bank CSVs.
 
+**Live Dash dashboard:** <https://gcc-stat-mart-dash.onrender.com>
+
 ## Run the Dash dashboard
 
 The primary presentation is a Plotly Dash app:
