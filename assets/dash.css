@@ -87,6 +87,32 @@ body {
   margin-top: 0;
 }
 
+.chart-mode-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.chart-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.3rem 0.55rem;
+  color: #334155;
+  background: #f1f5f4;
+  border: 1px solid #d8e2e0;
+  border-radius: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.chart-mode-radio {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .page {
   width: min(92rem, 92vw);
   margin: 0 auto;

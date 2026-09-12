@@ -381,6 +381,98 @@ def make_life_dot_plot(data: pd.DataFrame, unit: str) -> go.Figure:
     return style_figure(figure, unit)
 
 
+def make_life_original_to_latest(data: pd.DataFrame, unit: str) -> go.Figure:
+    """Compare each country's first published year with the latest available year."""
+    endpoints = (
+        data.sort_values("year")
+        .groupby("country_name", as_index=False)
+        .agg(first_year=("year", "min"), last_year=("year", "max"))
+    )
+    first_values = data.merge(
+        endpoints[["country_name", "first_year"]],
+        left_on=["country_name", "year"],
+        right_on=["country_name", "first_year"],
+    )
+    last_values = data.merge(
+        endpoints[["country_name", "last_year"]],
+        left_on=["country_name", "year"],
+        right_on=["country_name", "last_year"],
+    )
+    comparison = first_values[["country_name", "year", "value"]].merge(
+        last_values[["country_name", "year", "value"]],
+        on="country_name",
+        suffixes=("_start", "_end"),
+    ).sort_values("value_end")
+
+    figure = go.Figure()
+    for row in comparison.itertuples():
+        figure.add_trace(
+            go.Scatter(
+                x=[row.value_start, row.value_end],
+                y=[row.country_name, row.country_name],
+                mode="lines",
+                line={"color": "#cbd5e1", "width": 4},
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
+        figure.add_trace(
+            go.Scatter(
+                x=[row.value_start],
+                y=[row.country_name],
+                mode="markers",
+                marker={"size": 12, "color": "#94a3b8"},
+                hovertemplate=(
+                    f"{row.country_name}<br>"
+                    f"{int(row.year_start)}: %{{x:.1f}} years<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        )
+        change = row.value_end - row.value_start
+        figure.add_trace(
+            go.Scatter(
+                x=[row.value_end],
+                y=[row.country_name],
+                mode="markers+text",
+                marker={"size": 12, "color": "#0f9f7f"},
+                text=[f"{row.value_end:.1f} ({change:+.1f})"],
+                textposition="middle right",
+                hovertemplate=(
+                    f"{row.country_name}<br>"
+                    f"{int(row.year_end)}: %{{x:.1f}} years<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        )
+
+    figure.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            name="Original year",
+            marker={"size": 12, "color": "#94a3b8"},
+        )
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            name="Latest published year",
+            marker={"size": 12, "color": "#0f9f7f"},
+        )
+    )
+    figure.update_xaxes(
+        range=[
+            comparison["value_start"].min() - 1.5,
+            comparison["value_end"].max() + 4,
+        ]
+    )
+    return style_figure(figure, unit)
+
+
 def make_dumbbell(data: pd.DataFrame, unit: str) -> go.Figure:
     first_year = int(data["year"].min())
     last_year = int(data["year"].max())
@@ -442,7 +534,12 @@ def make_line_chart(data: pd.DataFrame, unit: str) -> go.Figure:
     return style_figure(figure, unit)
 
 
-def make_figure(code: str, data: pd.DataFrame, unit: str) -> go.Figure:
+def make_figure(
+    code: str,
+    data: pd.DataFrame,
+    unit: str,
+    life_exp_mode: str = "latest",
+) -> go.Figure:
     if code == "BIRTH_RATE":
         return make_birth_rate_small_multiples(data, unit)
     if code == "POP_MN":
@@ -452,6 +549,8 @@ def make_figure(code: str, data: pd.DataFrame, unit: str) -> go.Figure:
     if code == "OIL_RENT_PCT":
         return make_latest_bar(data, unit)
     if code == "LIFE_EXP":
+        if life_exp_mode == "compare":
+            return make_life_original_to_latest(data, unit)
         return make_life_dot_plot(data, unit)
     if code == "UNEMP_PCT":
         return make_dumbbell(data, unit)
@@ -474,6 +573,29 @@ def indicator_card(indicator) -> html.Article:
                         [
                             html.H3(indicator.indicator_name),
                             html.P(indicator.unit, className="unit"),
+                            *(
+                                [
+                                    dcc.RadioItems(
+                                        id="life-exp-mode",
+                                        options=[
+                                            {
+                                                "label": "Latest year",
+                                                "value": "latest",
+                                            },
+                                            {
+                                                "label": "Original to 2025",
+                                                "value": "compare",
+                                            },
+                                        ],
+                                        value="latest",
+                                        className="chart-mode-list",
+                                        labelClassName="chart-mode-option",
+                                        inputClassName="chart-mode-radio",
+                                    )
+                                ]
+                                if indicator.indicator_code == "LIFE_EXP"
+                                else []
+                            ),
                         ]
                     ),
                     html.Div(
@@ -635,10 +757,12 @@ for indicator in INDICATORS.itertuples():
     outputs,
     Input("country-filter", "value"),
     Input("year-filter", "value"),
+    Input("life-exp-mode", "value"),
 )
-def update_dashboard(selected_countries, selected_year_range):
+def update_dashboard(selected_countries, selected_year_range, life_exp_mode):
     selected_countries = selected_countries or COUNTRIES
     first_year, last_year = YEAR_SELECTIONS[selected_year_range]
+    life_exp_mode = life_exp_mode or "latest"
     selection_label = (
         str(first_year)
         if first_year == last_year
@@ -655,6 +779,15 @@ def update_dashboard(selected_countries, selected_year_range):
         indicator_data = filtered[
             filtered["indicator_code"] == indicator.indicator_code
         ]
+        if (
+            indicator.indicator_code == "LIFE_EXP"
+            and life_exp_mode == "compare"
+        ):
+            indicator_data = ALL_DATA[
+                ALL_DATA["country_name"].isin(selected_countries)
+                & (ALL_DATA["indicator_code"] == "LIFE_EXP")
+            ]
+
         if indicator_data.empty:
             results.extend(
                 [
@@ -670,14 +803,21 @@ def update_dashboard(selected_countries, selected_year_range):
             indicator_data["year"] == indicator_latest_year
         ]
         average = latest_data["value"].mean()
+        average_label = (
+            f"{int(indicator_data['year'].min())}–{indicator_latest_year} change"
+            if indicator.indicator_code == "LIFE_EXP"
+            and life_exp_mode == "compare"
+            else f"{indicator_latest_year} GCC average"
+        )
         results.extend(
             [
                 make_figure(
                     indicator.indicator_code,
                     indicator_data,
                     indicator.unit,
+                    life_exp_mode,
                 ),
-                f"{indicator_latest_year} GCC average",
+                average_label,
                 f"{average:,.1f}",
             ]
         )
