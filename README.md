@@ -9,7 +9,10 @@ A small **SQLite** project that stores comparable indicators for the six GCC cou
 
 SQL stays at **beginner to intermediate**: `SELECT`, `WHERE`, `JOIN`, `GROUP BY`, `CASE`, and one **self-join** for year-over-year change. No window functions.
 
-Sample numbers in `data/raw/` are **illustrative** (rounded, teaching-scale). Swap them later for [GCC-Stat](https://dp.marsa.gccstat.org/) or World Bank CSVs.
+The dashboard uses official [World Bank World Development Indicators](https://data.worldbank.org/indicator)
+downloaded through the World Bank API. Population is converted to millions and
+GDP to billions of current US dollars; the other indicators retain their
+published units. Latest available years differ by indicator.
 
 **Live Dash dashboard:** <https://gcc-stat-mart-dash.onrender.com>
 
@@ -25,36 +28,40 @@ python dash_app.py
 
 Then open <http://localhost:8050>.
 
-## How to run
+## Refresh the official data
 
-1. Install [DB Browser for SQLite](https://sqlitebrowser.org/) (or any SQLite client).
-2. Create a new database file in this folder named `gcc_stat.db`.
-3. Open and run, in order:
-   - `sql/01_create_tables.sql`
-   - `sql/02_seed_dimensions.sql`
-   - `sql/03_load_sample.sql`
-   - `sql/04_build_facts.sql`
-4. Run queries one at a time from `sql/05_queries.sql`.
-
-If you use the `sqlite3` CLI from this folder:
-
-```bash
-sqlite3 gcc_stat.db ".read sql/01_create_tables.sql"
-sqlite3 gcc_stat.db ".read sql/02_seed_dimensions.sql"
-sqlite3 gcc_stat.db ".read sql/03_load_sample.sql"
-sqlite3 gcc_stat.db ".read sql/04_build_facts.sql"
+```powershell
+.\.venv\Scripts\Activate.ps1
+python scripts\fetch_world_bank.py
 ```
+
+This downloads all eight indicators for the six GCC countries from 2000
+through the current year and writes:
+
+- `data/raw/gcc_indicators_world_bank.csv` — normalized observations
+- `data/raw/world_bank_metadata.json` — retrieval time and coverage
+
+Restart `dash_app.py` after refreshing. It rebuilds `gcc_stat.db` whenever the
+CSV or schema scripts are newer than the database.
+
+## SQL pipeline
+
+1. `sql/01_create_tables.sql` creates dimensions, staging, and facts.
+2. `sql/02_seed_dimensions.sql` inserts GCC countries, indicator definitions,
+   World Bank source codes, and years.
+3. Python imports the normalized World Bank CSV into `stg_indicator_raw`.
+4. `sql/04_build_facts.sql` validates codes through joins and builds the fact
+   table and analyst-friendly view.
+5. `sql/05_queries.sql` contains beginner-to-intermediate practice queries.
 
 ## Folder layout
 
 ```
-data/raw/     sample CSV (same numbers as 03_load_sample.sql)
-sql/          scripts in run order
+assets/       Dash presentation styles
+data/raw/     committed World Bank data and retrieval metadata
+scripts/      reproducible World Bank API downloader
+sql/          schema, dimensions, transformation, and practice queries
 ```
 
-## Next steps (when you want official data)
-
-1. Download a GCC-Stat or World Bank CSV.
-2. Map columns to `iso3`, `indicator_code`, `year`, `value`.
-3. Add any new codes to `dim_indicator`.
-4. Reload staging, then run `04_build_facts.sql` again.
+The original teaching CSV and `03_load_sample.sql` remain for learning, but the
+Dash application does not use them.

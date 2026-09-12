@@ -1,0 +1,60 @@
+{
+  "source": "World Bank World Development Indicators",
+  "api": "https://api.worldbank.org/v2",
+  "retrieved_at_utc": "2026-09-12T01:57:38.348203+00:00",
+  "requested_years": [
+    2000,
+    2026
+  ],
+  "rows": 1199,
+  "coverage": {
+    "POP_MN": {
+      "world_bank_indicator": "SP.POP.TOTL",
+      "rows": 156,
+      "first_year": 2000,
+      "last_year": 2025
+    },
+    "GDP_USD_BN": {
+      "world_bank_indicator": "NY.GDP.MKTP.CD",
+      "rows": 155,
+      "first_year": 2000,
+      "last_year": 2025
+    },
+    "GDP_PC_USD": {
+      "world_bank_indicator": "NY.GDP.PCAP.CD",
+      "rows": 155,
+      "first_year": 2000,
+      "last_year": 2025
+    },
+    "OIL_RENT_PCT": {
+      "world_bank_indicator": "NY.GDP.PETR.RT.ZS",
+      "rows": 131,
+      "first_year": 2000,
+      "last_year": 2021
+    },
+    "INFLATION_PCT": {
+      "world_bank_indicator": "FP.CPI.TOTL.ZG",
+      "rows": 146,
+      "first_year": 2000,
+      "last_year": 2025
+    },
+    "UNEMP_PCT": {
+      "world_bank_indicator": "SL.UEM.TOTL.ZS",
+      "rows": 156,
+      "first_year": 2000,
+      "last_year": 2025
+    },
+    "LIFE_EXP": {
+      "world_bank_indicator": "SP.DYN.LE00.IN",
+      "rows": 150,
+      "first_year": 2000,
+      "last_year": 2024
+    },
+    "BIRTH_RATE": {
+      "world_bank_indicator": "SP.DYN.CBRT.IN",
+      "rows": 150,
+      "first_year": 2000,
+      "last_year": 2024
+    }
+  }
+}

@@ -1,5 +1,6 @@
 from pathlib import Path
 import sqlite3
+import json
 
 from dash import Dash, Input, Output, dcc, html
 import pandas as pd
@@ -9,12 +10,9 @@ import plotly.graph_objects as go
 
 ROOT = Path(__file__).parent
 DATABASE = ROOT / "gcc_stat.db"
-SETUP_SCRIPTS = [
-    "01_create_tables.sql",
-    "02_seed_dimensions.sql",
-    "03_load_sample.sql",
-    "04_build_facts.sql",
-]
+REAL_DATA = ROOT / "data" / "raw" / "gcc_indicators_world_bank.csv"
+METADATA_FILE = ROOT / "data" / "raw" / "world_bank_metadata.json"
+SCHEMA_SCRIPTS = ["01_create_tables.sql", "02_seed_dimensions.sql"]
 
 COUNTRY_COLORS = {
     "Bahrain": "#3b82f6",
@@ -27,14 +25,42 @@ COUNTRY_COLORS = {
 
 
 def ensure_database() -> None:
-    if DATABASE.exists():
+    source_files = [
+        REAL_DATA,
+        ROOT / "sql" / "01_create_tables.sql",
+        ROOT / "sql" / "02_seed_dimensions.sql",
+        ROOT / "sql" / "04_build_facts.sql",
+    ]
+    if not all(path.exists() for path in source_files):
+        raise FileNotFoundError(
+            "Real World Bank data is missing. "
+            "Run scripts/fetch_world_bank.py first."
+        )
+
+    latest_source_change = max(path.stat().st_mtime for path in source_files)
+    if DATABASE.exists() and DATABASE.stat().st_mtime >= latest_source_change:
         return
+
+    if DATABASE.exists():
+        DATABASE.unlink()
 
     with sqlite3.connect(DATABASE) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
-        for script_name in SETUP_SCRIPTS:
+        for script_name in SCHEMA_SCRIPTS:
             script = (ROOT / "sql" / script_name).read_text(encoding="utf-8")
             connection.executescript(script)
+
+        real_data = pd.read_csv(REAL_DATA)
+        real_data.to_sql(
+            "stg_indicator_raw",
+            connection,
+            if_exists="append",
+            index=False,
+        )
+        build_script = (ROOT / "sql" / "04_build_facts.sql").read_text(
+            encoding="utf-8"
+        )
+        connection.executescript(build_script)
 
 
 def run_query(query: str) -> pd.DataFrame:
@@ -43,6 +69,8 @@ def run_query(query: str) -> pd.DataFrame:
 
 
 ensure_database()
+METADATA = json.loads(METADATA_FILE.read_text(encoding="utf-8"))
+RETRIEVED_DATE = METADATA["retrieved_at_utc"][:10]
 
 INDICATORS = run_query(
     """
@@ -70,6 +98,13 @@ ALL_DATA = run_query(
 )
 FIRST_YEAR = int(ALL_DATA["year"].min())
 LAST_YEAR = int(ALL_DATA["year"].max())
+DEFAULT_FIRST_YEAR = max(FIRST_YEAR, LAST_YEAR - 10)
+YEAR_MARKS = {
+    year: str(year)
+    for year in sorted(
+        set(range(FIRST_YEAR, LAST_YEAR + 1, 5)) | {LAST_YEAR}
+    )
+}
 
 
 def style_figure(figure: go.Figure, unit: str) -> go.Figure:
@@ -98,9 +133,12 @@ def style_figure(figure: go.Figure, unit: str) -> go.Figure:
 
 
 def make_heatmap(data: pd.DataFrame, diverging: bool = False) -> go.Figure:
+    countries_shown = [
+        country for country in COUNTRIES if country in data["country_name"].unique()
+    ]
     matrix = data.pivot(
         index="country_name", columns="year", values="value"
-    ).reindex(COUNTRIES)
+    ).reindex(countries_shown)
     colorscale = "RdBu_r" if diverging else "Tealgrn"
     limit = max(abs(matrix.min().min()), abs(matrix.max().max()))
     figure = go.Figure(
@@ -113,7 +151,7 @@ def make_heatmap(data: pd.DataFrame, diverging: bool = False) -> go.Figure:
             zmin=-limit if diverging else None,
             zmax=limit if diverging else None,
             text=matrix.round(1).astype(str).values,
-            texttemplate="%{text}",
+            texttemplate="%{text}" if len(matrix.columns) <= 12 else None,
             hovertemplate="%{y}<br>%{x}: %{z:.1f}<extra></extra>",
             colorbar={"thickness": 10, "len": 0.8},
         )
@@ -288,7 +326,9 @@ def indicator_card(indicator) -> html.Article:
                     ),
                     html.Div(
                         [
-                            html.Span("Latest GCC average"),
+                            html.Span(
+                                id=f"average-label-{indicator.indicator_code}"
+                            ),
                             html.Strong(id=f"average-{indicator.indicator_code}"),
                         ],
                         className="average",
@@ -343,8 +383,9 @@ app.layout = html.Div(
                         html.Span("ALTERNATIVE PRESENTATION", className="badge"),
                         html.H1("GCC Statistical Mart"),
                         html.P(
-                            "The same SQLite mart, presented as an editorial "
-                            "analytics dashboard using Plotly Dash."
+                            "Official World Bank indicators for the six GCC "
+                            "countries, modeled in SQLite and presented with "
+                            "Plotly Dash."
                         ),
                     ],
                     className="hero-copy",
@@ -368,11 +409,8 @@ app.layout = html.Div(
                             min=FIRST_YEAR,
                             max=LAST_YEAR,
                             step=1,
-                            value=[FIRST_YEAR, LAST_YEAR],
-                            marks={
-                                year: str(year)
-                                for year in range(FIRST_YEAR, LAST_YEAR + 1)
-                            },
+                            value=[DEFAULT_FIRST_YEAR, LAST_YEAR],
+                            marks=YEAR_MARKS,
                             allowCross=False,
                         ),
                     ],
@@ -410,13 +448,21 @@ app.layout = html.Div(
                     className="summary-grid",
                 ),
                 html.Div(
-                    "Teaching data only — rounded illustrative values, not "
-                    "official statistics.",
+                    f"Source: World Bank World Development Indicators · "
+                    f"retrieved {RETRIEVED_DATE} · each indicator shows its "
+                    f"latest available year.",
                     className="notice",
                 ),
                 *category_sections,
                 html.Footer(
-                    "Built from the same gcc_stat.db and SQL star schema.",
+                    [
+                        "Built from the gcc_stat.db SQL star schema · ",
+                        html.A(
+                            "World Bank WDI",
+                            href="https://data.worldbank.org/indicator",
+                            target="_blank",
+                        ),
+                    ],
                     className="footer",
                 ),
             ],
@@ -430,6 +476,7 @@ for indicator in INDICATORS.itertuples():
     outputs.extend(
         [
             Output(f"chart-{indicator.indicator_code}", "figure"),
+            Output(f"average-label-{indicator.indicator_code}", "children"),
             Output(f"average-{indicator.indicator_code}", "children"),
         ]
     )
@@ -454,7 +501,10 @@ def update_dashboard(selected_countries, selected_years):
         indicator_data = filtered[
             filtered["indicator_code"] == indicator.indicator_code
         ]
-        latest_data = indicator_data[indicator_data["year"] == latest_year]
+        indicator_latest_year = int(indicator_data["year"].max())
+        latest_data = indicator_data[
+            indicator_data["year"] == indicator_latest_year
+        ]
         average = latest_data["value"].mean()
         results.extend(
             [
@@ -463,6 +513,7 @@ def update_dashboard(selected_countries, selected_years):
                     indicator_data,
                     indicator.unit,
                 ),
+                f"{indicator_latest_year} GCC average",
                 f"{average:,.1f}",
             ]
         )

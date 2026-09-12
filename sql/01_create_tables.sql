@@ -18,11 +18,14 @@ CREATE TABLE dim_country (
 );
 
 CREATE TABLE dim_indicator (
-    indicator_id   INTEGER PRIMARY KEY,
-    indicator_code TEXT NOT NULL UNIQUE,
-    indicator_name TEXT NOT NULL,
-    unit           TEXT NOT NULL,
-    category       TEXT NOT NULL
+    indicator_id         INTEGER PRIMARY KEY,
+    indicator_code       TEXT NOT NULL UNIQUE,
+    indicator_name       TEXT NOT NULL,
+    unit                 TEXT NOT NULL,
+    category             TEXT NOT NULL,
+    source_name          TEXT NOT NULL,
+    source_indicator_code TEXT NOT NULL,
+    source_url           TEXT NOT NULL
 );
 
 CREATE TABLE dim_year (

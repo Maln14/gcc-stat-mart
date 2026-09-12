@@ -24,7 +24,11 @@ SELECT
     value AS gdp_billion_usd
 FROM vw_gcc_indicators
 WHERE indicator_code = 'GDP_USD_BN'
-  AND year = 2023
+  AND year = (
+      SELECT MAX(year)
+      FROM vw_gcc_indicators
+      WHERE indicator_code = 'GDP_USD_BN'
+  )
 ORDER BY value DESC;
 
 -- 5) Beginner: GROUP BY — average oil rents over the sample years
@@ -36,7 +40,7 @@ WHERE indicator_code = 'OIL_RENT_PCT'
 GROUP BY country_name
 ORDER BY avg_oil_rent_pct DESC;
 
--- 6) Intermediate: CASE — label how oil-dependent a country looks in 2023
+-- 6) Intermediate: CASE — label oil dependence in its latest available year
 SELECT
     country_name,
     value AS oil_rent_pct,
@@ -47,7 +51,11 @@ SELECT
     END AS oil_dependence
 FROM vw_gcc_indicators
 WHERE indicator_code = 'OIL_RENT_PCT'
-  AND year = 2023
+  AND year = (
+      SELECT MAX(year)
+      FROM vw_gcc_indicators
+      WHERE indicator_code = 'OIL_RENT_PCT'
+  )
 ORDER BY value DESC;
 
 -- 7) Intermediate: compare 2019 vs 2020 GDP (COVID shock) with a self-join

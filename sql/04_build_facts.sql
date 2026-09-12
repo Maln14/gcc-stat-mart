@@ -29,6 +29,9 @@ SELECT
     i.indicator_name,
     i.unit,
     i.category,
+    i.source_name,
+    i.source_indicator_code,
+    i.source_url,
     f.year,
     f.value
 FROM fact_indicator AS f
