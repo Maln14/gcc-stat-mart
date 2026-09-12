@@ -52,7 +52,7 @@ CSV or schema scripts are newer than the database.
 3. Python imports the normalized World Bank CSV into `stg_indicator_raw`.
 4. `sql/04_build_facts.sql` validates codes through joins and builds the fact
    table and analyst-friendly view.
-5. `sql/05_queries.sql` contains beginner-to-intermediate practice queries.
+5. `sql/05_queries.sql` contains the queries.
 
 ## Folder layout
 
