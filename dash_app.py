@@ -6,6 +6,7 @@ from dash import Dash, Input, Output, dcc, html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 ROOT = Path(__file__).parent
@@ -98,13 +99,20 @@ ALL_DATA = run_query(
 )
 FIRST_YEAR = int(ALL_DATA["year"].min())
 LAST_YEAR = int(ALL_DATA["year"].max())
-DEFAULT_FIRST_YEAR = max(FIRST_YEAR, LAST_YEAR - 10)
-YEAR_MARKS = {
-    year: str(year)
-    for year in sorted(
-        set(range(FIRST_YEAR, LAST_YEAR + 1, 5)) | {LAST_YEAR}
-    )
+YEAR_RANGES = {
+    "latest_5": (max(FIRST_YEAR, LAST_YEAR - 4), LAST_YEAR),
+    "latest_10": (max(FIRST_YEAR, LAST_YEAR - 9), LAST_YEAR),
+    "since_2010": (max(FIRST_YEAR, 2010), LAST_YEAR),
+    "full": (FIRST_YEAR, LAST_YEAR),
 }
+YEAR_RANGE_OPTIONS = [
+    {
+        "label": f"{start}–{end}"
+        + (" (full history)" if key == "full" else ""),
+        "value": key,
+    }
+    for key, (start, end) in YEAR_RANGES.items()
+]
 
 
 def style_figure(figure: go.Figure, unit: str) -> go.Figure:
@@ -132,30 +140,107 @@ def style_figure(figure: go.Figure, unit: str) -> go.Figure:
     return figure
 
 
-def make_heatmap(data: pd.DataFrame, diverging: bool = False) -> go.Figure:
+def make_birth_rate_small_multiples(
+    data: pd.DataFrame, unit: str
+) -> go.Figure:
+    """Give every country its own readable trend panel."""
     countries_shown = [
         country for country in COUNTRIES if country in data["country_name"].unique()
     ]
-    matrix = data.pivot(
-        index="country_name", columns="year", values="value"
-    ).reindex(countries_shown)
-    colorscale = "RdBu_r" if diverging else "Tealgrn"
-    limit = max(abs(matrix.min().min()), abs(matrix.max().max()))
-    figure = go.Figure(
-        go.Heatmap(
-            z=matrix.values,
-            x=matrix.columns,
-            y=matrix.index,
-            colorscale=colorscale,
-            zmid=0 if diverging else None,
-            zmin=-limit if diverging else None,
-            zmax=limit if diverging else None,
-            text=matrix.round(1).astype(str).values,
-            texttemplate="%{text}" if len(matrix.columns) <= 12 else None,
-            hovertemplate="%{y}<br>%{x}: %{z:.1f}<extra></extra>",
-            colorbar={"thickness": 10, "len": 0.8},
-        )
+    columns = 2
+    rows = (len(countries_shown) + columns - 1) // columns
+    figure = make_subplots(
+        rows=rows,
+        cols=columns,
+        subplot_titles=countries_shown,
+        shared_xaxes=True,
+        shared_yaxes=True,
+        vertical_spacing=0.13,
+        horizontal_spacing=0.12,
     )
+
+    for position, country in enumerate(countries_shown):
+        country_data = data[data["country_name"] == country].sort_values("year")
+        row = position // columns + 1
+        column = position % columns + 1
+        figure.add_trace(
+            go.Scatter(
+                x=country_data["year"],
+                y=country_data["value"],
+                mode="lines+markers",
+                line={"color": COUNTRY_COLORS[country], "width": 2.5},
+                marker={"size": 5},
+                customdata=[country] * len(country_data),
+                hovertemplate=(
+                    "%{customdata}<br>%{x}: %{y:.1f}<extra></extra>"
+                ),
+                showlegend=False,
+            ),
+            row=row,
+            col=column,
+        )
+
+    figure = style_figure(figure, unit)
+    figure.update_layout(height=max(260, rows * 170), showlegend=False)
+    figure.update_annotations(font={"size": 12, "color": "#243148"})
+    figure.update_xaxes(title=None, dtick=2, tickangle=0)
+    figure.update_yaxes(title=None)
+    return figure
+
+
+def make_inflation_small_multiples(
+    data: pd.DataFrame, unit: str
+) -> go.Figure:
+    """Separate volatile country series and emphasize the zero boundary."""
+    countries_shown = [
+        country for country in COUNTRIES if country in data["country_name"].unique()
+    ]
+    columns = 2
+    rows = (len(countries_shown) + columns - 1) // columns
+    figure = make_subplots(
+        rows=rows,
+        cols=columns,
+        subplot_titles=countries_shown,
+        shared_xaxes=True,
+        shared_yaxes=True,
+        vertical_spacing=0.13,
+        horizontal_spacing=0.12,
+    )
+
+    for position, country in enumerate(countries_shown):
+        country_data = data[data["country_name"] == country].sort_values("year")
+        row = position // columns + 1
+        column = position % columns + 1
+        colors = [
+            "#dc6b4a" if value >= 0 else "#3787c0"
+            for value in country_data["value"]
+        ]
+        figure.add_trace(
+            go.Bar(
+                x=country_data["year"],
+                y=country_data["value"],
+                marker_color=colors,
+                customdata=[country] * len(country_data),
+                hovertemplate=(
+                    "%{customdata}<br>%{x}: %{y:.1f}%<extra></extra>"
+                ),
+                showlegend=False,
+            ),
+            row=row,
+            col=column,
+        )
+        figure.add_hline(
+            y=0,
+            line={"color": "#64748b", "width": 1},
+            row=row,
+            col=column,
+        )
+
+    figure = style_figure(figure, unit)
+    figure.update_layout(height=max(260, rows * 170), showlegend=False)
+    figure.update_annotations(font={"size": 12, "color": "#243148"})
+    figure.update_xaxes(title=None, dtick=2, tickangle=0)
+    figure.update_yaxes(title=None)
     return figure
 
 
@@ -295,8 +380,7 @@ def make_line_chart(data: pd.DataFrame, unit: str) -> go.Figure:
 
 def make_figure(code: str, data: pd.DataFrame, unit: str) -> go.Figure:
     if code == "BIRTH_RATE":
-        figure = make_heatmap(data)
-        return style_figure(figure, "Year")
+        return make_birth_rate_small_multiples(data, unit)
     if code == "POP_MN":
         return make_latest_bar(data, unit)
     if code == "GDP_PC_USD":
@@ -308,12 +392,16 @@ def make_figure(code: str, data: pd.DataFrame, unit: str) -> go.Figure:
     if code == "UNEMP_PCT":
         return make_dumbbell(data, unit)
     if code == "INFLATION_PCT":
-        figure = make_heatmap(data, diverging=True)
-        return style_figure(figure, "Year")
+        return make_inflation_small_multiples(data, unit)
     return make_line_chart(data, unit)
 
 
 def indicator_card(indicator) -> html.Article:
+    chart_height = (
+        "520px"
+        if indicator.indicator_code in {"BIRTH_RATE", "INFLATION_PCT"}
+        else "310px"
+    )
     return html.Article(
         [
             html.Div(
@@ -339,7 +427,7 @@ def indicator_card(indicator) -> html.Article:
             dcc.Graph(
                 id=f"chart-{indicator.indicator_code}",
                 config={"displayModeBar": False, "responsive": True},
-                style={"height": "310px"},
+                style={"height": chart_height},
             ),
         ],
         className="chart-card",
@@ -404,14 +492,13 @@ app.layout = html.Div(
                             clearable=False,
                         ),
                         html.Label("Year range"),
-                        dcc.RangeSlider(
+                        dcc.RadioItems(
                             id="year-filter",
-                            min=FIRST_YEAR,
-                            max=LAST_YEAR,
-                            step=1,
-                            value=[DEFAULT_FIRST_YEAR, LAST_YEAR],
-                            marks=YEAR_MARKS,
-                            allowCross=False,
+                            options=YEAR_RANGE_OPTIONS,
+                            value="latest_10",
+                            className="year-range-list",
+                            labelClassName="year-range-option",
+                            inputClassName="year-range-radio",
                         ),
                     ],
                     className="filter-panel",
@@ -487,9 +574,9 @@ for indicator in INDICATORS.itertuples():
     Input("country-filter", "value"),
     Input("year-filter", "value"),
 )
-def update_dashboard(selected_countries, selected_years):
+def update_dashboard(selected_countries, selected_year_range):
     selected_countries = selected_countries or COUNTRIES
-    first_year, last_year = selected_years
+    first_year, last_year = YEAR_RANGES[selected_year_range]
     filtered = ALL_DATA[
         ALL_DATA["country_name"].isin(selected_countries)
         & ALL_DATA["year"].between(first_year, last_year)

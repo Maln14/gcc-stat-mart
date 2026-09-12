@@ -73,7 +73,7 @@ body {
   box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.2);
 }
 
-.filter-panel label {
+.filter-panel > label {
   display: block;
   margin: 0.9rem 0 0.45rem;
   color: #475569;
@@ -83,22 +83,36 @@ body {
   text-transform: uppercase;
 }
 
-.filter-panel label:first-child {
+.filter-panel > label:first-child {
   margin-top: 0;
 }
 
-#year-filter {
-  margin: 1.2rem 0 0.4rem;
+.year-range-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.35rem;
 }
 
-.rc-slider-track {
-  background-color: var(--accent);
+.filter-panel .year-range-option {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  color: #334155;
+  background: #f1f5f4;
+  border: 1px solid #d8e2e0;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.rc-slider-handle,
-.rc-slider-handle:hover,
-.rc-slider-handle:active {
-  border-color: var(--accent);
+.year-range-radio {
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .page {
