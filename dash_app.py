@@ -176,6 +176,29 @@ def make_no_data_figure(year_label: str) -> go.Figure:
     return style_figure(figure, "")
 
 
+def year_axis_settings(data: pd.DataFrame) -> dict:
+    """Keep year labels readable as the selected history grows."""
+    first_year = int(data["year"].min())
+    span = int(data["year"].max()) - first_year
+    if span <= 5:
+        spacing = 1
+    elif span <= 10:
+        spacing = 2
+    elif span <= 16:
+        spacing = 3
+    else:
+        spacing = 5
+    return {
+        "title": None,
+        "tickmode": "linear",
+        "tick0": first_year,
+        "dtick": spacing,
+        "tickformat": "d",
+        "tickangle": 0,
+        "automargin": True,
+    }
+
+
 def make_birth_rate_small_multiples(
     data: pd.DataFrame, unit: str
 ) -> go.Figure:
@@ -219,7 +242,7 @@ def make_birth_rate_small_multiples(
     figure = style_figure(figure, unit)
     figure.update_layout(height=max(260, rows * 170), showlegend=False)
     figure.update_annotations(font={"size": 12, "color": "#243148"})
-    figure.update_xaxes(title=None, dtick=2, tickangle=0)
+    figure.update_xaxes(**year_axis_settings(data))
     figure.update_yaxes(title=None)
     return figure
 
@@ -275,7 +298,7 @@ def make_inflation_small_multiples(
     figure = style_figure(figure, unit)
     figure.update_layout(height=max(260, rows * 170), showlegend=False)
     figure.update_annotations(font={"size": 12, "color": "#243148"})
-    figure.update_xaxes(title=None, dtick=2, tickangle=0)
+    figure.update_xaxes(**year_axis_settings(data))
     figure.update_yaxes(title=None)
     return figure
 
