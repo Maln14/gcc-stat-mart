@@ -654,12 +654,10 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.Span("ALTERNATIVE PRESENTATION", className="badge"),
                         html.H1("GCC Statistical Mart"),
                         html.P(
-                            "Official World Bank indicators for the six GCC "
-                            "countries, modeled in SQLite and presented with "
-                            "Plotly Dash."
+                            "World Bank Indicators for the GCC, modeled in "
+                            "SQLite and presented in Dash."
                         ),
                     ],
                     className="hero-copy",
