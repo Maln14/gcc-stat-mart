@@ -99,19 +99,39 @@ ALL_DATA = run_query(
 )
 FIRST_YEAR = int(ALL_DATA["year"].min())
 LAST_YEAR = int(ALL_DATA["year"].max())
-YEAR_RANGES = {
-    "latest_5": (max(FIRST_YEAR, LAST_YEAR - 4), LAST_YEAR),
-    "latest_10": (max(FIRST_YEAR, LAST_YEAR - 9), LAST_YEAR),
-    "since_2010": (max(FIRST_YEAR, 2010), LAST_YEAR),
-    "full": (FIRST_YEAR, LAST_YEAR),
+YEAR_SELECTIONS = {
+    "range_full": (FIRST_YEAR, LAST_YEAR),
+    "range_latest_5": (max(FIRST_YEAR, LAST_YEAR - 4), LAST_YEAR),
+    "range_latest_10": (max(FIRST_YEAR, LAST_YEAR - 9), LAST_YEAR),
+    "range_since_2010": (max(FIRST_YEAR, 2010), LAST_YEAR),
 }
-YEAR_RANGE_OPTIONS = [
+YEAR_SELECTIONS.update(
     {
-        "label": f"{start}–{end}"
-        + (" (full history)" if key == "full" else ""),
-        "value": key,
+        f"year_{year}": (year, year)
+        for year in range(LAST_YEAR, FIRST_YEAR - 1, -1)
     }
-    for key, (start, end) in YEAR_RANGES.items()
+)
+YEAR_OPTIONS = [
+    {
+        "label": f"Range · Full history ({FIRST_YEAR}–{LAST_YEAR})",
+        "value": "range_full",
+    },
+    {
+        "label": f"Range · Latest 5 years ({LAST_YEAR - 4}–{LAST_YEAR})",
+        "value": "range_latest_5",
+    },
+    {
+        "label": f"Range · Latest 10 years ({LAST_YEAR - 9}–{LAST_YEAR})",
+        "value": "range_latest_10",
+    },
+    {
+        "label": f"Range · Since 2010 (2010–{LAST_YEAR})",
+        "value": "range_since_2010",
+    },
+    *[
+        {"label": f"Year · {year}", "value": f"year_{year}"}
+        for year in range(LAST_YEAR, FIRST_YEAR - 1, -1)
+    ],
 ]
 
 
@@ -138,6 +158,22 @@ def style_figure(figure: go.Figure, unit: str) -> go.Figure:
         yaxis={"title": None, "gridcolor": "#e8edf4"},
     )
     return figure
+
+
+def make_no_data_figure(year_label: str) -> go.Figure:
+    figure = go.Figure()
+    figure.add_annotation(
+        text=f"No data published for {year_label}",
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font={"size": 15, "color": "#64748b"},
+    )
+    figure.update_xaxes(visible=False)
+    figure.update_yaxes(visible=False)
+    return style_figure(figure, "")
 
 
 def make_birth_rate_small_multiples(
@@ -345,7 +381,12 @@ def make_dumbbell(data: pd.DataFrame, unit: str) -> go.Figure:
             )
         )
 
-    for year, color in [(first_year, "#94a3b8"), (last_year, "#0f9f7f")]:
+    endpoint_years = (
+        [(last_year, "#0f9f7f")]
+        if first_year == last_year
+        else [(first_year, "#94a3b8"), (last_year, "#0f9f7f")]
+    )
+    for year, color in endpoint_years:
         year_data = endpoints[endpoints["year"] == year]
         figure.add_trace(
             go.Scatter(
@@ -491,14 +532,12 @@ app.layout = html.Div(
                             multi=True,
                             clearable=False,
                         ),
-                        html.Label("Year range"),
-                        dcc.RadioItems(
+                        html.Label("Year or range"),
+                        dcc.Dropdown(
                             id="year-filter",
-                            options=YEAR_RANGE_OPTIONS,
-                            value="latest_10",
-                            className="year-range-list",
-                            labelClassName="year-range-option",
-                            inputClassName="year-range-radio",
+                            options=YEAR_OPTIONS,
+                            value="range_latest_10",
+                            clearable=False,
                         ),
                     ],
                     className="filter-panel",
@@ -576,7 +615,12 @@ for indicator in INDICATORS.itertuples():
 )
 def update_dashboard(selected_countries, selected_year_range):
     selected_countries = selected_countries or COUNTRIES
-    first_year, last_year = YEAR_RANGES[selected_year_range]
+    first_year, last_year = YEAR_SELECTIONS[selected_year_range]
+    selection_label = (
+        str(first_year)
+        if first_year == last_year
+        else f"{first_year}–{last_year}"
+    )
     filtered = ALL_DATA[
         ALL_DATA["country_name"].isin(selected_countries)
         & ALL_DATA["year"].between(first_year, last_year)
@@ -588,6 +632,16 @@ def update_dashboard(selected_countries, selected_year_range):
         indicator_data = filtered[
             filtered["indicator_code"] == indicator.indicator_code
         ]
+        if indicator_data.empty:
+            results.extend(
+                [
+                    make_no_data_figure(selection_label),
+                    f"{selection_label} GCC average",
+                    "N/A",
+                ]
+            )
+            continue
+
         indicator_latest_year = int(indicator_data["year"].max())
         latest_data = indicator_data[
             indicator_data["year"] == indicator_latest_year

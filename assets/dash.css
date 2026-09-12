@@ -87,34 +87,6 @@ body {
   margin-top: 0;
 }
 
-.year-range-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
-  margin-top: 0.35rem;
-}
-
-.filter-panel .year-range-option {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  margin: 0;
-  padding: 0.55rem 0.65rem;
-  color: #334155;
-  background: #f1f5f4;
-  border: 1px solid #d8e2e0;
-  border-radius: 0.45rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.year-range-radio {
-  margin: 0;
-  accent-color: var(--accent);
-}
-
 .page {
   width: min(92rem, 92vw);
   margin: 0 auto;
