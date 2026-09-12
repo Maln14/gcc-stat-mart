@@ -214,7 +214,7 @@ def make_birth_rate_small_multiples(
         subplot_titles=countries_shown,
         shared_xaxes=True,
         shared_yaxes=True,
-        vertical_spacing=0.13,
+        vertical_spacing=0.18,
         horizontal_spacing=0.12,
     )
 
@@ -240,10 +240,20 @@ def make_birth_rate_small_multiples(
         )
 
     figure = style_figure(figure, unit)
-    figure.update_layout(height=max(260, rows * 170), showlegend=False)
+    figure.update_layout(
+        height=max(260, rows * 195),
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
     figure.update_annotations(font={"size": 12, "color": "#243148"})
-    figure.update_xaxes(**year_axis_settings(data))
-    figure.update_yaxes(title=None)
+    figure.update_xaxes(
+        **year_axis_settings(data),
+        showticklabels=True,
+        showgrid=False,
+        zeroline=False,
+    )
+    figure.update_yaxes(title=None, showgrid=False, zeroline=False)
     return figure
 
 
@@ -262,7 +272,7 @@ def make_inflation_small_multiples(
         subplot_titles=countries_shown,
         shared_xaxes=True,
         shared_yaxes=True,
-        vertical_spacing=0.13,
+        vertical_spacing=0.18,
         horizontal_spacing=0.12,
     )
 
@@ -296,10 +306,20 @@ def make_inflation_small_multiples(
         )
 
     figure = style_figure(figure, unit)
-    figure.update_layout(height=max(260, rows * 170), showlegend=False)
+    figure.update_layout(
+        height=max(260, rows * 195),
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
     figure.update_annotations(font={"size": 12, "color": "#243148"})
-    figure.update_xaxes(**year_axis_settings(data))
-    figure.update_yaxes(title=None)
+    figure.update_xaxes(
+        **year_axis_settings(data),
+        showticklabels=True,
+        showgrid=False,
+        zeroline=False,
+    )
+    figure.update_yaxes(title=None, showgrid=False, zeroline=False)
     return figure
 
 
@@ -723,17 +743,6 @@ app.layout = html.Div(
                     className="notice",
                 ),
                 *category_sections,
-                html.Footer(
-                    [
-                        "Built from the gcc_stat.db SQL star schema · ",
-                        html.A(
-                            "World Bank WDI",
-                            href="https://data.worldbank.org/indicator",
-                            target="_blank",
-                        ),
-                    ],
-                    className="footer",
-                ),
             ],
             className="page",
         ),

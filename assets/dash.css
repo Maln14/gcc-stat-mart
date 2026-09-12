@@ -243,15 +243,6 @@ body {
   font-weight: 400;
 }
 
-.footer {
-  margin-top: 4rem;
-  padding-top: 1.5rem;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
-  font-size: 0.85rem;
-  text-align: center;
-}
-
 @media (max-width: 850px) {
   .hero {
     grid-template-columns: 1fr;
