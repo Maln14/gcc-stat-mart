@@ -1,0 +1,54 @@
+name: Refresh World Bank data
+
+on:
+  schedule:
+    # First Monday of each month around 06:15 UTC
+    - cron: "15 6 1-7 * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-world-bank
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch World Bank indicators
+        run: python scripts/fetch_world_bank.py
+
+      - name: Rebuild SQLite mart
+        run: python scripts/build_mart.py
+
+      - name: Detect data changes
+        id: changes
+        run: |
+          if git diff --quiet -- data/raw/gcc_indicators_world_bank.csv data/raw/world_bank_metadata.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit refreshed extract
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/raw/gcc_indicators_world_bank.csv data/raw/world_bank_metadata.json
+          git commit -m "chore: refresh World Bank GCC indicators"
+          git push

@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: gcc-stat-mart-dash
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python scripts/build_mart.py
+    startCommand: gunicorn dash_app:server --bind 0.0.0.0:$PORT
+    healthCheckPath: /
