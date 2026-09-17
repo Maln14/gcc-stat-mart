@@ -4,6 +4,8 @@ SQLite statistical mart and Plotly Dash dashboard for comparable World Bank
 indicators across the six GCC countries. The app focuses on peer benchmarking:
 rankings, year-over-year change, and oil-dependence thresholds.
 
+**Live dashboard:** <https://gcc-stat-mart-dash.onrender.com>
+
 ## Features
 
 - Star-schema mart (`dim_*`, staging, `fact_indicator`) with analyst views
@@ -75,7 +77,13 @@ database rebuilds automatically when the CSV or mart builder is newer than
 
 ## Deploy
 
-`render.yaml` builds the mart during deploy and serves with gunicorn.
+`render.yaml` defines a Render web service (`gcc-stat-mart-dash`).
+
+Live URL: <https://gcc-stat-mart-dash.onrender.com>
+
+After pushing to GitHub, trigger a manual deploy in the Render dashboard (or
+enable auto-deploy from `main`) so the service picks up the latest commit.
+Free-tier instances may sleep when idle and take a short time to wake.
 
 ## Folder layout
 
