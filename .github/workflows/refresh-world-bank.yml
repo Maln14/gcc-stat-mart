@@ -2,7 +2,6 @@ name: Refresh World Bank data
 
 on:
   schedule:
-    # First Monday of each month around 06:15 UTC
     - cron: "15 6 1-7 * 1"
   workflow_dispatch:
 

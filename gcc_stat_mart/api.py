@@ -1,4 +1,4 @@
-"""Thin JSON/CSV/XLSX API over the SQLite mart views."""
+"""JSON/CSV/XLSX API for mart views."""
 
 from __future__ import annotations
 
@@ -268,7 +268,6 @@ def export_xlsx() -> Response:
 
 
 def register_api(app, *, database: Path | None = None) -> None:
-    """Attach the API blueprint to a Flask/Dash server."""
     global _ACTIVE_DB
     _ACTIVE_DB = Path(database) if database else DEFAULT_DB
     if "api" not in app.blueprints:

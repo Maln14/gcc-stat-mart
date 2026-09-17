@@ -1,4 +1,4 @@
-"""Build or refresh the SQLite statistical mart from World Bank CSV + config."""
+"""Build the SQLite mart from World Bank CSV."""
 
 from __future__ import annotations
 
@@ -77,6 +77,8 @@ def ensure_schema(connection: sqlite3.Connection) -> None:
 
 
 def seed_dimensions(connection: sqlite3.Connection, years: list[int]) -> None:
+    connection.execute("DELETE FROM fact_indicator")
+    connection.execute("DELETE FROM stg_indicator_raw")
     connection.execute("DELETE FROM dim_country")
     connection.executemany(
         """
@@ -256,7 +258,6 @@ def build_mart(db_path: Path, csv_path: Path) -> dict:
     if not years:
         raise RuntimeError("No years found in source CSV")
 
-    # Keep a buffer year beyond observed data for future refreshes.
     years = list(range(min(years), max(years) + 2))
 
     with connect(db_path) as connection:

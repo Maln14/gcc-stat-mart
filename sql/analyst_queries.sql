@@ -1,13 +1,10 @@
--- Useful analyst queries for the benchmarking mart.
--- Run after scripts/build_mart.py.
-
 -- Latest GDP per capita ranking
 SELECT country_name, year, value, rank_desc, gcc_average
 FROM vw_latest_ranks
 WHERE indicator_code = 'GDP_PC_USD'
 ORDER BY rank_desc;
 
--- Oil dependence bands using latest published year
+-- Oil dependence bands
 SELECT
     country_name,
     year,
@@ -21,7 +18,7 @@ FROM vw_latest_ranks
 WHERE indicator_code = 'OIL_RENT_PCT'
 ORDER BY value DESC;
 
--- Year-over-year GDP change for the latest available year per country
+-- Year-over-year GDP change
 SELECT country_name, year, value, previous_value, yoy_pct
 FROM vw_indicator_yoy
 WHERE indicator_code = 'GDP_USD_BN'
@@ -32,7 +29,7 @@ WHERE indicator_code = 'GDP_USD_BN'
   )
 ORDER BY yoy_pct;
 
--- Data-quality: staging rows that failed dimension joins
+-- Staging rows that failed dimension joins
 SELECT s.iso3, s.indicator_code, s.year, s.value
 FROM stg_indicator_raw AS s
 LEFT JOIN dim_country AS c ON c.iso3 = s.iso3

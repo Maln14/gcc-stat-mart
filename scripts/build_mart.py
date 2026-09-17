@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""CLI wrapper: python scripts/build_mart.py"""
-
 from __future__ import annotations
 
 import sys

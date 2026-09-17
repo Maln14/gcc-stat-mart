@@ -1,4 +1,4 @@
-"""Single source of truth for GCC mart indicators and countries."""
+"""GCC mart indicators and countries."""
 
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ COUNTRY_COLORS = {
     "United Arab Emirates": "#0e7490",
 }
 
-# Internal code -> World Bank mapping and display metadata.
 INDICATORS = {
     "POP_MN": {
         "world_bank_code": "SP.POP.TOTL",

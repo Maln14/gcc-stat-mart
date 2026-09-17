@@ -1,4 +1,4 @@
-"""GCC Statistical Mart — peer benchmarking dashboard."""
+"""GCC Statistical Mart dashboard."""
 
 from __future__ import annotations
 
@@ -454,7 +454,6 @@ def make_figure(code: str, data: pd.DataFrame, single_year: bool) -> go.Figure:
     unit = meta["unit"]
     fmt = meta["format"]
 
-    # When a single year is selected, prefer a ranking view for trend charts too.
     if single_year and chart in {"trend", "small_multiples_line", "small_multiples_bar"}:
         return make_rank_bar(data, unit, fmt)
     if chart == "trend":
@@ -496,7 +495,6 @@ def leaderboard_rows(selected_countries: list[str]) -> list:
         if subset.empty:
             continue
         meta = INDICATORS[code]
-        # For "bad" metrics, best = lowest value.
         if meta["higher_is_better"] is False:
             subset = subset.sort_values("value")
             best = subset.iloc[0]

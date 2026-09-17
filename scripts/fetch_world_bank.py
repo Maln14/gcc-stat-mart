@@ -1,4 +1,4 @@
-"""Download comparable GCC indicators from the World Bank WDI API."""
+"""Fetch GCC indicators from the World Bank API."""
 
 from __future__ import annotations
 
