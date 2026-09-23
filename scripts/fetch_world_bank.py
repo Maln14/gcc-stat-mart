@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+import time
 
 import requests
 
@@ -28,6 +29,10 @@ METADATA_OUTPUT = ROOT / "data" / "raw" / "world_bank_metadata.json"
 API_ROOT = "https://api.worldbank.org/v2"
 COUNTRY_CODES = [row["iso3"] for row in COUNTRIES]
 
+REQUEST_TIMEOUT = 120
+MAX_ATTEMPTS = 5
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+
 
 def fetch_indicator(
     internal_code: str,
@@ -38,38 +43,63 @@ def fetch_indicator(
 ) -> list[dict]:
     country_path = ";".join(COUNTRY_CODES)
     url = f"{API_ROOT}/country/{country_path}/indicator/{world_bank_code}"
-    response = requests.get(
-        url,
-        params={
-            "format": "json",
-            "per_page": 20_000,
-            "date": f"{start_year}:{end_year}",
-        },
-        timeout=90,
-    )
-    response.raise_for_status()
-    payload = response.json()
+    params = {
+        "format": "json",
+        "per_page": 20_000,
+        "date": f"{start_year}:{end_year}",
+    }
 
-    if not isinstance(payload, list) or len(payload) < 2 or payload[1] is None:
-        raise RuntimeError(f"No World Bank data returned for {world_bank_code}")
+    last_error: Exception | None = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            if response.status_code in RETRY_STATUSES:
+                raise requests.HTTPError(
+                    f"Transient World Bank HTTP {response.status_code}",
+                    response=response,
+                )
+            response.raise_for_status()
+            payload = response.json()
 
-    rows = []
-    for observation in payload[1]:
-        value = observation["value"]
-        iso3 = observation["countryiso3code"]
-        if value is None or iso3 not in COUNTRY_CODES:
-            continue
+            if not isinstance(payload, list) or len(payload) < 2 or payload[1] is None:
+                raise RuntimeError(f"No World Bank data returned for {world_bank_code}")
 
-        rows.append(
-            {
-                "iso3": iso3,
-                "indicator_code": internal_code,
-                "year": int(observation["date"]),
-                "value": float(value) / divisor,
-                "notes": f"World Bank WDI indicator {world_bank_code}",
-            }
-        )
-    return rows
+            rows = []
+            for observation in payload[1]:
+                value = observation["value"]
+                iso3 = observation["countryiso3code"]
+                if value is None or iso3 not in COUNTRY_CODES:
+                    continue
+
+                rows.append(
+                    {
+                        "iso3": iso3,
+                        "indicator_code": internal_code,
+                        "year": int(observation["date"]),
+                        "value": float(value) / divisor,
+                        "notes": f"World Bank WDI indicator {world_bank_code}",
+                    }
+                )
+            return rows
+        except (
+            requests.Timeout,
+            requests.ConnectionError,
+            requests.HTTPError,
+            RuntimeError,
+        ) as exc:
+            last_error = exc
+            if attempt >= MAX_ATTEMPTS:
+                break
+            wait_seconds = 2 ** (attempt - 1)
+            print(
+                f"{world_bank_code}: attempt {attempt}/{MAX_ATTEMPTS} failed "
+                f"({type(exc).__name__}: {exc}); retrying in {wait_seconds}s",
+                file=sys.stderr,
+            )
+            time.sleep(wait_seconds)
+
+    assert last_error is not None
+    raise last_error
 
 
 def main() -> None:

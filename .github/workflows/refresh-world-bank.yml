@@ -29,6 +29,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Fetch World Bank indicators
+        # Retries in the script can take several minutes on slow World Bank responses.
+        timeout-minutes: 20
         run: python scripts/fetch_world_bank.py
 
       - name: Rebuild SQLite mart
