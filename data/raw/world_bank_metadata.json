@@ -1,7 +1,7 @@
 {
   "source": "World Bank World Development Indicators",
   "api": "https://api.worldbank.org/v2",
-  "retrieved_at_utc": "2026-10-04T12:19:26.420606+00:00",
+  "retrieved_at_utc": "2026-10-05T14:34:05.541265+00:00",
   "requested_years": [
     2000,
     2026
